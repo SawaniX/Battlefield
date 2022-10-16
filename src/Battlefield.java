@@ -30,7 +30,11 @@ class Battlefield {
         boolean hit = false;
 
         System.out.println("The game starts!");
-        printBattlefield();
+
+        Battlefield emptyBattlefield = new Battlefield(fieldSize, shipsNames, shipsSizes);
+        emptyBattlefield.initializeBattlefield();
+        emptyBattlefield.printBattlefield();
+
         System.out.println("Take a shot!");
 
         Scanner scan = new Scanner(System.in);
@@ -40,26 +44,29 @@ class Battlefield {
             int column = Integer.parseInt(word.replaceAll("[\\D]", "")) - 1;
 
             if (row >= 0 && row < fieldSize && column >= 0 && column < fieldSize) {
-                hit = isShipHit(row, column);
+                hit = isShipHit(row, column, emptyBattlefield);
             } else {
                 System.out.println("Error! You entered the wrong coordinates! Try again:");
             }
         }
+        printBattlefield();
     }
 
-    private boolean isShipHit(int row, int column) {
+    private boolean isShipHit(int row, int column, Battlefield emptyBattlefield) {
         boolean hit = field[row][column].equals(OWN_SHIP);
 
         if (hit) {
+            emptyBattlefield.field[row][column] = HITTED;
             field[row][column] = HITTED;
-            printBattlefield();
+            emptyBattlefield.printBattlefield();
             System.out.println("You hit a ship!");
             return true;
         } else {
+            emptyBattlefield.field[row][column] = MISSED;
             field[row][column] = MISSED;
-            printBattlefield();
+            emptyBattlefield.printBattlefield();
             System.out.println("You missed!");
-            return false;
+            return true;
         }
     }
 
