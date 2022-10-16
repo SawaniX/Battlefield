@@ -173,11 +173,6 @@ class Battlefield {
     }
 
     private void createShips() {
-        /*
-         * Consider renaming "nextShip" boolean variable.
-         * Please take a quick look at this article:
-         * https://dev.to/michi/tips-on-naming-boolean-variables-cleaner-code-35ig
-         */
         for (int i = 0; i < shipsNames.length; i++) {
             boolean isNextShip = false;
             System.out.printf("Enter the coordinates of the %s (%d cells)\n",
@@ -205,12 +200,6 @@ class Battlefield {
     }
 
     private boolean isShipPlaceableAtCoordinates(int row1, int column1, int row2, int column2, int shipSize) {
-        /*
-         * No need for multiple "if" and "else if" statements.
-         * You can make this work by the way shown below
-         * because of lazy evaluation. Please take a look at:
-         * https://en.wikipedia.org/wiki/Lazy_evaluation
-         */
         return !isOutOfBoundaries(row1, column1, row2, column2)
                 && !isShipDirectionWrong(row1, column1, row2, column2)
                 && !isShipSizeWrong(row1, column1, row2, column2, shipSize)
