@@ -7,70 +7,90 @@ class Battlefield {
     private static final String HITTED = "X";
     private static final String MISSED = "M";
     private final String[][] field;
+    private final String[][] emptyField;
     private final int fieldSize;
     private final String[] shipsNames;
     private final int[] shipsSizes;
+    private int shipsNumber;
 
 
     public Battlefield(int fieldSize, String[] shipsNames, int[] shipsSizes) {
         this.fieldSize = fieldSize;
         this.field = new String[fieldSize][fieldSize];
+        this.emptyField = new String[fieldSize][fieldSize];
         this.shipsNames = shipsNames;
         this.shipsSizes = shipsSizes;
+        this.shipsNumber = shipsNames.length;
     }
 
     public void StartGame() {
-        initializeBattlefield();
-        printBattlefield();
+        initializeBattlefield(field);
+        printBattlefield(field);
         createShips();
         startShooting();
     }
 
     private void startShooting() {
-        boolean hit = false;
-
+        boolean isGameEnd = false;
         System.out.println("The game starts!");
 
-        Battlefield emptyBattlefield = new Battlefield(fieldSize, shipsNames, shipsSizes);
-        emptyBattlefield.initializeBattlefield();
-        emptyBattlefield.printBattlefield();
+        initializeBattlefield(emptyField);
+        printBattlefield(emptyField);
 
         System.out.println("Take a shot!");
 
+        shoot();
+
+        System.out.println("You sank the last ship. You won. Congratulations!");
+    }
+
+    private void shoot() {
         Scanner scan = new Scanner(System.in);
-        while (!hit) {
+        while (shipsNumber > 0) {
             String word = scan.next();
             int row = Character.getNumericValue(word.charAt(0)) - 10;
             int column = Integer.parseInt(word.replaceAll("[\\D]", "")) - 1;
 
             if (row >= 0 && row < fieldSize && column >= 0 && column < fieldSize) {
-                hit = isShipHit(row, column, emptyBattlefield);
+                processShot(row, column);
             } else {
                 System.out.println("Error! You entered the wrong coordinates! Try again:");
             }
         }
-        printBattlefield();
     }
 
-    private boolean isShipHit(int row, int column, Battlefield emptyBattlefield) {
-        boolean hit = field[row][column].equals(OWN_SHIP);
+    private void processShot(int row, int column) {
+        boolean hit = field[row][column].equals(OWN_SHIP) || field[row][column].equals(HITTED);
 
         if (hit) {
-            emptyBattlefield.field[row][column] = HITTED;
-            field[row][column] = HITTED;
-            emptyBattlefield.printBattlefield();
-            System.out.println("You hit a ship!");
-            return true;
+            shipHitted(row, column);
         } else {
-            emptyBattlefield.field[row][column] = MISSED;
-            field[row][column] = MISSED;
-            emptyBattlefield.printBattlefield();
-            System.out.println("You missed!");
-            return true;
+            shipMissed(row, column);
         }
     }
 
-    private void printBattlefield() {
+    private void shipHitted(int row, int column) {
+        boolean wasShipDestroyed = isShipDestroyed(row, column, OWN_SHIP);
+        emptyField[row][column] = HITTED;
+        field[row][column] = HITTED;
+        printBattlefield(emptyField);
+        boolean isShipDestroyed = isShipDestroyed(row, column, OWN_SHIP);
+        if (isShipDestroyed && !wasShipDestroyed) {
+            shipsNumber -= 1;
+            System.out.println("You sank a ship! Specify a new target:" + shipsNumber);
+        } else {
+            System.out.println("You hit a ship!");
+        }
+    }
+
+    private void shipMissed(int row, int column) {
+        emptyField[row][column] = MISSED;
+        field[row][column] = MISSED;
+        printBattlefield(emptyField);
+        System.out.println("You missed!");
+    }
+
+    private void printBattlefield(String[][] battleField) {
         int[] first_row = new int[fieldSize];
         Arrays.setAll(first_row, i -> i + 1);
         char first_column = 'A';
@@ -85,7 +105,7 @@ class Battlefield {
                 } else if (j == 0) {
                     System.out.print(Character.toString(first_column + i - 1) + " ");
                 } else {
-                    System.out.print(field[i - 1][j - 1] + " ");
+                    System.out.print(battleField[i - 1][j - 1] + " ");
                 }
             }
             System.out.println();
@@ -93,8 +113,8 @@ class Battlefield {
         System.out.println();
     }
 
-    private void initializeBattlefield() {
-        for (String[] row : field) {
+    private void initializeBattlefield(String[][] battleField) {
+        for (String[] row : battleField) {
             Arrays.fill(row, FOG);
         }
     }
@@ -123,7 +143,7 @@ class Battlefield {
             int stopColumn = Math.max(column1, column2);
 
             for (int column = startColumn; column <= stopColumn; column++) {
-                if (!areNeighborsEmpty(row1, column)) {
+                if (!areNeighborsEmpty(row1, column, FOG)) {
                     System.out.println("Error! You placed it too close to another one. Try again:");
                     return false;
                 }
@@ -135,7 +155,7 @@ class Battlefield {
         int stopRow = Math.max(row1, row2);
 
         for (int row = startRow; row <= stopRow; row++) {
-            if (!areNeighborsEmpty(row, column1)) {
+            if (!areNeighborsEmpty(row, column1, FOG)) {
                 System.out.println("Error! You placed it too close to another one. Try again:");
                 return false;
             }
@@ -143,29 +163,26 @@ class Battlefield {
         return true;
     }
 
-    private boolean areNeighborsEmpty(int row, int column) {
-        if (row == 0 && column == 0) {
-            return isLeftTopCornerEmpty(row, column);
-        } else if (row == 0 && column == fieldSize - 1) {
-            return isRightTopCornerEmpty(row, column);
-        } else if (row == fieldSize - 1 && column == 0) {
-            return isLeftBottomCornerEmpty(row, column);
-        } else if (row == fieldSize - 1 && column == fieldSize - 1) {
-            return isRightBottomCornerEmpty(row, column);
-        } else if (row == 0) {
-            return isTopRowEmpty(row, column);
-        } else if (row == fieldSize - 1) {
-            return isBottomRowEmpty(row, column);
-        } else if (column == 0) {
-            return isLeftColumnEmpty(row, column);
-        } else if (column == fieldSize - 1) {
-            return isRightColumnEmpty(row, column);
-        }
-
+    private boolean areNeighborsEmpty(int row, int column, String sign) {
         for (int i = -1; i <= 1; i++) {
             for (int j = -1; j <= 1; j++) {
-                if (!this.field[row - i][column - j].equals(FOG)) {
-                    return false;
+                if (!(row - i < 0 || row - i > fieldSize - 1 || column - j < 0 || column - j > fieldSize - 1)) {
+                    if (!field[row - i][column - j].equals(sign)) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    private boolean isShipDestroyed(int row, int column, String sign) {
+        for (int i = -1; i <= 1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                if (!(row - i < 0 || row - i > fieldSize - 1 || column - j < 0 || column - j > fieldSize - 1)) {
+                    if (field[row - i][column - j].equals(sign)) {
+                        return false;
+                    }
                 }
             }
         }
@@ -195,7 +212,7 @@ class Battlefield {
                     placeShipOnBattlefield(row1, column1, row2, column2);
                 }
             }
-            printBattlefield();
+            printBattlefield(field);
         }
     }
 
@@ -235,69 +252,5 @@ class Battlefield {
             System.out.println("Error! Wrong length of the Submarine! Try again:");
         }
         return isShipSizeWrong;
-    }
-
-    private boolean isLeftTopCornerEmpty(int row, int column) {
-        return field[row][column].equals(FOG)
-                && field[row][column + 1].equals(FOG)
-                && field[row + 1][column].equals(FOG)
-                && field[row + 1][column + 1].equals(FOG);
-    }
-
-    private boolean isRightTopCornerEmpty(int row, int column) {
-        return field[row][column].equals(FOG)
-                && field[row][column - 1].equals(FOG)
-                && field[row + 1][column].equals(FOG)
-                && field[row + 1][column - 1].equals(FOG);
-    }
-
-    private boolean isLeftBottomCornerEmpty(int row, int column) {
-        return field[row][column].equals(FOG)
-                && field[row][column + 1].equals(FOG)
-                && field[row - 1][column].equals(FOG)
-                && field[row - 1][column + 1].equals(FOG);
-    }
-
-    private boolean isRightBottomCornerEmpty(int row, int column) {
-        return field[row][column].equals(FOG)
-                && field[row][column - 1].equals(FOG)
-                && field[row - 1][column].equals(FOG)
-                && field[row - 1][column - 1].equals(FOG);
-    }
-
-    private boolean isTopRowEmpty(int row, int column) {
-        return field[row][column].equals(FOG)
-                && field[row][column - 1].equals(FOG)
-                && field[row][column + 1].equals(FOG)
-                && field[row + 1][column].equals(FOG)
-                && field[row + 1][column - 1].equals(FOG)
-                && field[row + 1][column + 1].equals(FOG);
-    }
-
-    private boolean isBottomRowEmpty(int row, int column) {
-        return field[row][column].equals(FOG)
-                && field[row][column - 1].equals(FOG)
-                && field[row][column + 1].equals(FOG)
-                && field[row - 1][column].equals(FOG)
-                && field[row - 1][column - 1].equals(FOG)
-                && field[row - 1][column + 1].equals(FOG);
-    }
-
-    private boolean isLeftColumnEmpty(int row, int column) {
-        return field[row][column].equals(FOG)
-                && field[row][column + 1].equals(FOG)
-                && field[row - 1][column].equals(FOG)
-                && field[row - 1][column + 1].equals(FOG)
-                && field[row + 1][column].equals(FOG)
-                && field[row + 1][column + 1].equals(FOG);
-    }
-
-    private boolean isRightColumnEmpty(int row, int column) {
-        return field[row][column].equals(FOG)
-                && field[row][column - 1].equals(FOG)
-                && field[row - 1][column].equals(FOG)
-                && field[row - 1][column - 1].equals(FOG)
-                && field[row + 1][column].equals(FOG)
-                && field[row + 1][column - 1].equals(FOG);
     }
 }
